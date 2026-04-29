@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>My AI Assistant</title>
+
+<style>
+body {
+    font-family: Arial;
+    background: #111;
+    color: white;
+    padding: 20px;
+}
+
+#chat {
+    height: 400px;
+    overflow-y: auto;
+    border: 1px solid #444;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+input {
+    padding: 10px;
+    margin: 5px;
+}
+
+#input {
+    width: 60%;
+}
+
+button {
+    padding: 10px;
+}
+
+/* Loading spinner */
+.loader {
+  border: 3px solid #444;
+  border-top: 3px solid white;
+  border-radius: 50%;
+  width: 12px;
+  height: 12px;
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  100% { transform: rotate(360deg); }
+}
+
+img {
+    margin-top: 5px;
+    border-radius: 5px;
+}
+</style>
+
+</head>
+
+<body>
+
+<h2>My AI Assistant 🤖</h2>
+
+<div id="chat"></div>
+
+<input type="text" id="input" placeholder="Ask something...">
+<input type="file" id="imageInput">
+<button onclick="send()">Send</button>
+
+<script>
+async function send() {
+    let inputBox = document.getElementById("input");
+    let message = inputBox.value;
+    let file = document.getElementById("imageInput").files[0];
+
+    if (message.trim() === "" && !file) return;
+
+    let chat = document.getElementById("chat");
+
+    // Show user message
+    chat.innerHTML += "<p><b>You:</b> " + message + "</p>";
+
+    let base64Image = null;
+
+    // Convert image
+    if (file) {
+        let reader = new FileReader();
+        reader.readAsDataURL(file);
+        await new Promise(resolve => reader.onload = resolve);
+        base64Image = reader.result;
+
+        // show preview
+        chat.innerHTML += "<img src='" + base64Image + "' width='150'><br>";
+    }
+
+    // Loading
+    let loadingId = "loading-" + Date.now();
+    chat.innerHTML += "<p id='" + loadingId + "'><b>AI:</b> <span class='loader'></span> Thinking...</p>";
+
+    chat.scrollTop = chat.scrollHeight;
+
+    inputBox.value = "";
+    document.getElementById("imageInput").value = "";
+
+    try {
+        let res = await fetch("http://127.0.0.1:5050/chat", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                message: message,
+                image: base64Image
+            })
+        });
+
+        let data = await res.json();
+
+        document.getElementById(loadingId).innerHTML =
+            "<b>AI:</b> " + data.reply;
+
+    } catch (err) {
+        document.getElementById(loadingId).innerHTML =
+            "<b>AI:</b> ❌ Error connecting to server";
+    }
+
+    chat.scrollTop = chat.scrollHeight;
+}
+
+// ENTER key
+document.getElementById("input").addEventListener("keypress", function(e) {
+    if (e.key === "Enter") {
+        send();
+    }
+});
+</script>
+
+</body>
+</html>
